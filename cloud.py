@@ -49,7 +49,6 @@ def wifi_connect(ssid=None, pwd=None, trytime=None):
     while _trytime > count:
         if not wifi_sta.connect(_ssid, _pwd):
             count += 1
-            print(count)
         else:
             break
 
