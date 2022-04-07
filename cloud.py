@@ -10,6 +10,7 @@ import socket
 import io
 import machine
 
+import _thread
 
 def __nwled_on():
     nwpin = machine.Pin(12, machine.Pin.OUT)
@@ -19,6 +20,23 @@ def __nwled_on():
 def __nwled_off():
     nwpin = machine.Pin(12, machine.Pin.OUT)
     nwpin.value(0)
+
+
+req_th_exit = False
+th_alive = False
+def __blink():
+    global th_alive
+    th_alive = True
+    is_on = False
+    while not req_th_exit:
+        if is_on:
+            __nwled_off()
+        else:
+            __nwled_on()
+        is_on = not is_on
+        time.sleep(0.5)
+    th_alive = False
+    _thread.exit()
 
 
 """
@@ -36,7 +54,10 @@ def wifi_config(ssid, pwd):
 
 # WiFi connection
 def wifi_connect(ssid=None, pwd=None, trytime=None):
-    global wifi_sta, wifi_info
+    global wifi_sta, wifi_info, req_th_exit
+
+    req_th_exit = False
+    _thread.start_new_thread(__blink, ())
 
     _ssid = ssid if ssid is not None else wifi_info["ssid"]
     _pwd = pwd if pwd is not None else wifi_info["pwd"]
@@ -53,12 +74,27 @@ def wifi_connect(ssid=None, pwd=None, trytime=None):
             break
 
     if count < _trytime:
+        req_th_exit = True
+        while th_alive:
+            print('wait...')
+            time.sleep(1)
+
         __nwled_on()
         return True
     else:
+        req_th_exit = True
+        while th_alive:
+            print('wait...')
+            time.sleep(1)
+
         wifi_sta.active(False)
         __nwled_off()
         raise RuntimeError('It executed up to number of trials.')
+
+    req_th_exit = True
+    while th_alive:
+        print('wait...')
+        time.sleep(1)
 
     __nwled_on()
     return True
